@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { SlideData, MoodConfig } from './types';
 import { MOODS, INITIAL_SLIDES } from './constants';
 import { fetchPexelsImages } from './services/pexelsService';
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Palette, Search, Maximize2, Minimize2, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Palette, Search, Maximize2, Minimize2, Clock, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [slides, setSlides] = useState<SlideData[]>(INITIAL_SLIDES);
@@ -15,6 +15,10 @@ const App: React.FC = () => {
   const [isWallpaperMode, setIsWallpaperMode] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(5);
   const [isTimerActive, setIsTimerActive] = useState(false);
+  
+  // UI Visibility state for Zen Mode
+  const [isUIVisible, setIsUIVisible] = useState(true);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNext = useCallback(() => {
     setSlides(prevSlides => {
@@ -33,6 +37,31 @@ const App: React.FC = () => {
       return newSlides;
     });
   }, []);
+
+  // Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isWallpaperMode) {
+        setIsWallpaperMode(false);
+        setIsUIVisible(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isWallpaperMode]);
+
+  // Handle mouse movement to show/hide exit button in Zen mode
+  const handleMouseMove = useCallback(() => {
+    if (!isWallpaperMode) return;
+    
+    setIsUIVisible(true);
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    hideTimeoutRef.current = setTimeout(() => {
+      setIsUIVisible(false);
+    }, 3000);
+  }, [isWallpaperMode]);
 
   // Slideshow logic
   useEffect(() => {
@@ -71,7 +100,10 @@ const App: React.FC = () => {
   const activeSlide = slides[0];
 
   return (
-    <div className={`relative w-screen h-screen bg-[#010101] overflow-hidden transition-all duration-1000 ${isWallpaperMode ? 'cursor-none' : ''}`}>
+    <div 
+      onMouseMove={handleMouseMove}
+      className={`relative w-screen h-screen bg-[#010101] overflow-hidden transition-all duration-1000 ${isWallpaperMode && !isUIVisible ? 'cursor-none' : 'cursor-default'}`}
+    >
       {/* Background Main Image */}
       <div className="absolute inset-0 z-0">
         {slides.map((slide, index) => (
@@ -95,10 +127,10 @@ const App: React.FC = () => {
       {/* Navigation Header */}
       <nav className={`absolute top-0 left-0 w-full z-50 flex justify-between items-center px-12 py-8 transition-all duration-500 ${isWallpaperMode ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100'}`}>
         <div className="text-2xl font-bold tracking-[5px] text-white">PEXELS CURATOR</div>
-        <div className="flex gap-8 text-sm uppercase tracking-widest font-medium">
-          <button className="hover:text-gray-400 transition-colors">Galleries</button>
-          <button className="hover:text-gray-400 transition-colors">Artists</button>
-          <button className="hover:text-gray-400 transition-colors">About</button>
+        <div className="flex gap-8 text-sm uppercase tracking-widest font-medium text-white/70">
+          <button className="hover:text-white transition-colors">Galleries</button>
+          <button className="hover:text-white transition-colors">Artists</button>
+          <button className="hover:text-white transition-colors">About</button>
         </div>
       </nav>
 
@@ -119,10 +151,10 @@ const App: React.FC = () => {
           </p>
           
           <div className="flex gap-4 animate-content-delayed-2">
-            <button className="px-8 py-3 bg-white text-black font-bold text-sm tracking-widest uppercase hover:bg-gray-200 transition-all active:scale-95">
+            <button className="px-8 py-3 bg-white text-black font-bold text-sm tracking-widest uppercase hover:bg-gray-200 transition-all active:scale-95 shadow-xl">
               Explore Now
             </button>
-            <button className="px-8 py-3 border border-white text-white font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-all active:scale-95">
+            <button className="px-8 py-3 border border-white/40 text-white font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-all active:scale-95 backdrop-blur-sm">
               Save Set
             </button>
           </div>
@@ -155,13 +187,13 @@ const App: React.FC = () => {
       <div className={`absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex gap-4 items-center transition-all duration-500 ${isWallpaperMode ? 'opacity-0 translate-y-20 pointer-events-none' : 'opacity-100'}`}>
         <button
           onClick={handlePrev}
-          className="p-3 border border-white/30 rounded-full hover:bg-white hover:text-black hover:border-white transition-all group"
+          className="p-3 border border-white/30 rounded-full bg-black/20 backdrop-blur-md hover:bg-white hover:text-black hover:border-white transition-all group shadow-lg"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={handleNext}
-          className="p-3 border border-white/30 rounded-full hover:bg-white hover:text-black hover:border-white transition-all group"
+          className="p-3 border border-white/30 rounded-full bg-black/20 backdrop-blur-md hover:bg-white hover:text-black hover:border-white transition-all group shadow-lg"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
@@ -173,8 +205,8 @@ const App: React.FC = () => {
         {/* Wallpaper Toggle */}
         <button 
           onClick={() => setIsWallpaperMode(true)}
-          className="p-4 bg-white/10 backdrop-blur-md rounded-l-2xl border-l border-t border-b border-white/20 hover:bg-white/20 transition-all flex flex-col items-center gap-2 group"
-          title="Enter Wallpaper Mode"
+          className="p-4 bg-white/10 backdrop-blur-md rounded-l-2xl border-l border-t border-b border-white/20 hover:bg-white/20 transition-all flex flex-col items-center gap-2 group shadow-xl"
+          title="Enter Zen Mode (Press ESC to exit)"
         >
           <Maximize2 className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
           <span className="[writing-mode:vertical-lr] text-[10px] tracking-[4px] font-bold uppercase">Zen Mode</span>
@@ -183,7 +215,7 @@ const App: React.FC = () => {
         {/* Mood Selector Button */}
         <button 
           onClick={() => setShowMoodMenu(!showMoodMenu)}
-          className="p-4 bg-white/10 backdrop-blur-md rounded-l-2xl border-l border-t border-b border-white/20 hover:bg-white/20 transition-all flex flex-col items-center gap-2 group"
+          className="p-4 bg-white/10 backdrop-blur-md rounded-l-2xl border-l border-t border-b border-white/20 hover:bg-white/20 transition-all flex flex-col items-center gap-2 group shadow-xl"
         >
           {isFetching ? (
             <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -209,7 +241,7 @@ const App: React.FC = () => {
               <input 
                 type="range" 
                 min="2" 
-                max="30" 
+                max="60" 
                 step="1"
                 value={timerSeconds}
                 onChange={(e) => setTimerSeconds(parseInt(e.target.value))}
@@ -251,14 +283,18 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Exit Wallpaper Mode Button (Visible on Hover in Wallpaper Mode) */}
+      {/* Exit Zen Mode Button (Visible on Move in Zen Mode) */}
       {isWallpaperMode && (
         <button 
-          onClick={() => setIsWallpaperMode(false)}
-          className="absolute top-8 right-8 z-[100] p-4 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white opacity-0 hover:opacity-100 transition-all duration-300"
-          title="Exit Zen Mode"
+          onClick={() => {
+            setIsWallpaperMode(false);
+            setIsUIVisible(true);
+          }}
+          className={`absolute top-8 right-8 z-[100] flex items-center gap-3 px-6 py-4 bg-black/40 hover:bg-black/80 backdrop-blur-xl rounded-full border border-white/20 text-white transition-all duration-500 transform ${isUIVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}
+          title="Exit Zen Mode (ESC)"
         >
-          <Minimize2 className="w-6 h-6" />
+          <X className="w-5 h-5" />
+          <span className="text-xs font-bold tracking-[3px] uppercase">Exit Zen Mode</span>
         </button>
       )}
 
