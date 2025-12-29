@@ -1,0 +1,5 @@
+{
+  "name": "Cinematic Mood Slider",
+  "description": "A high-end, AI-powered image slider that generates immersive environments based on user-selected moods using Gemini 2.5 Flash Image.",
+  "requestFramePermissions": []
+}
